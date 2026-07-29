@@ -4,12 +4,14 @@ import datetime
 import time
 import os
 import smtplib
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Load env variables from environment
+# Load env variables
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "ttasfique323162@gmail.com")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "afrl mhaj pxcw ucot")
 RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL", "pkm.tasfique.tanveer@g.bracu.ac.bd")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "30"))
 
@@ -31,20 +33,9 @@ LOCATIONS = {
 }
 
 DEVICE_KEY = "d40fc4be2c27da8fe8d71e820bb4e39606b457f106197aaf465e870fae9fa9b0"
-
-def get_guest_token():
-    # If GUEST_TOKEN is set in environment, use it
-    env_token = os.getenv("GUEST_TOKEN")
-    if env_token:
-        return env_token
-    # Default active guest token fallback
-    return "1293001|CINE-TICKET-VBUQQtwUcxmppqpaEwCFl4ZnEMOyL7RuS5QP62Yqd2533103"
+GUEST_TOKEN = "1293001|CINE-TICKET-VBUQQtwUcxmppqpaEwCFl4ZnEMOyL7RuS5QP62Yqd2533103"
 
 def send_email_alert(matches):
-    if not GMAIL_APP_PASSWORD:
-        print("[WARNING] GMAIL_APP_PASSWORD is missing! Email alert skipped.", flush=True)
-        return False
-
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "🚨 URGENT: Spider-Man Sunday Tickets Released on Cineplex BD! 🎟️"
     msg["From"] = f"Cineplex Ticket Monitor <{SENDER_EMAIL}>"
@@ -97,7 +88,6 @@ def send_email_alert(matches):
         return False
 
 def check_cineplex():
-    token = get_guest_token()
     url = f"{API_BASE_URL}/get-showdate"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -107,11 +97,11 @@ def check_cineplex():
         "Accept": "application/json",
         "appsource": "web",
         "device-key": DEVICE_KEY,
-        "Authorization": f"Bearer {token}"
+        "Authorization": f"Bearer {GUEST_TOKEN}"
     }
 
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{now_str}] [CLOUD BOT] Checking Cineplex locations...", flush=True)
+    print(f"[{now_str}] [FREE RENDER BOT] Checking Cineplex locations...", flush=True)
 
     new_matches = []
     for loc_id, loc_name in LOCATIONS.items():
@@ -147,11 +137,28 @@ def check_cineplex():
     else:
         print(f"[{now_str}] No Sunday Spider-Man tickets released yet.", flush=True)
 
-if __name__ == "__main__":
-    print("Starting Cloud Cineplex Ticket Monitor...", flush=True)
+def monitor_loop():
     while True:
         try:
             check_cineplex()
         except Exception as main_e:
             print(f"Loop Exception: {main_e}", flush=True)
         time.sleep(CHECK_INTERVAL_SECONDS)
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(b"Star Cineplex Ticket Bot is running 24/7!")
+
+if __name__ == "__main__":
+    print("Starting Free Render Web Service Ticket Monitor...", flush=True)
+    # Start monitor loop in background thread
+    t = threading.Thread(target=monitor_loop, daemon=True)
+    t.start()
+
+    # Bind HTTP server to PORT for Render Free Web Service
+    port = int(os.getenv("PORT", "10000"))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    server.serve_forever()

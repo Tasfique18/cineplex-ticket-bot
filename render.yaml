@@ -1,15 +1,16 @@
 services:
-  - type: worker
+  - type: web
     name: cineplex-ticket-bot
     env: python
+    plan: free
     buildCommand: echo "Building bot..."
     startCommand: python main.py
     envVars:
       - key: SENDER_EMAIL
         value: ttasfique323162@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        value: afrl mhaj pxcw ucot
       - key: RECIPIENT_EMAIL
         value: pkm.tasfique.tanveer@g.bracu.ac.bd
       - key: CHECK_INTERVAL_SECONDS
         value: "30"
-      - key: GMAIL_APP_PASSWORD
-        sync: false
